@@ -1,0 +1,13 @@
+core:
+  mode: "test"
+  fail_fast_timeout: 3 # 当程序收到signal时候，要保证在fail_fast_timeout(unit: second)时间段内退出
+  log_size: 4096
+  pid:
+    enabled: false
+    path: "logkafka.pid"
+    override: true
+
+kafka:
+  # 多个broker之间逗号分隔
+  brokers: "127.0.0.1:9092"
+  topic: "telemetry"
