@@ -4,10 +4,13 @@ core:
   log_size: 4096
   pid:
     enabled: false
-    path: "logkafka.pid"
+    path: "exocet-metaserver.pid"
     override: true
 
-kafka:
-  # 多个broker之间逗号分隔
-  brokers: "127.0.0.1:9092"
-  topic: "telemetry"
+redis:
+  sentinel:
+    - 192.168.1.100:26380
+    - 192.168.1.100:26381
+    - 192.168.1.100:26382
+  meta_db_name: meta
+  update_interval: 90

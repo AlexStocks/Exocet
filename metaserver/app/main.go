@@ -26,8 +26,7 @@ const (
 )
 
 const (
-	FailfastTimeout  = 3 // in second
-	KeepAliveTimeout = 1e9
+	FailfastTimeout = 3 // in second
 )
 
 var (
@@ -103,10 +102,9 @@ func initLog(logConf string) {
 
 func initSignal() {
 	var (
-		seq int
 		// signal.Notify的ch信道是阻塞的(signal.Notify不会阻塞发送信号), 需要设置缓冲
 		signals = make(chan os.Signal, 1)
-		ticker  = time.NewTicker(KeepAliveTimeout)
+		ticker  = time.NewTicker(gxtime.TimeSecondDuration(Conf.Redis.UpdateInterval))
 	)
 	// It is not possible to block SIGKILL or syscall.SIGSTOP
 	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
@@ -120,22 +118,18 @@ func initSignal() {
 			default:
 				go gxtime.Future(Conf.Core.FailFastTimeout, func() {
 					Log.Warn("app exit now by force...")
+					Log.Close()
 					os.Exit(1)
 				})
 
 				// 要么survialTimeout时间内执行完毕下面的逻辑然后程序退出，要么执行上面的超时函数程序强行退出
-				Server.Stop()
+				worker.Close()
 				Log.Warn("app exit now...")
 				Log.Close()
 				return
 			}
-		// case <-time.After(time.Duration(1e9)):
 		case <-ticker.C:
-			UpdateNow()
-			seq++
-			if seq%60 == 0 {
-				Log.Info(Worker.Info())
-			}
+			worker.updateClusterMeta()
 		}
 	}
 }
@@ -206,6 +200,10 @@ func main() {
 
 	if err = createPIDFile(); err != nil {
 		Log.Critic(err)
+	}
+	worker = NewSentinelWorker()
+	if err = worker.WatchInstanceSwitch(); err != nil {
+		panic(fmt.Sprintf("failed to start watch instance switch goroutine, error:%#v", err))
 	}
 
 	initSignal()

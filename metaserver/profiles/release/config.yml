@@ -1,25 +1,16 @@
 core:
   mode: "release"
-  worker_num: 256
-  queue_num: 512
   fail_fast_timeout: 3 # 当程序收到signal时候，要保证在fail_fast_timeout(unit: second)时间段内退出
-  udp_port: 2000
-  udp_read_buffer_size: 8388608
-  udp_read_timeout: 3
   log_size: 4096
   pid:
     enabled: false
-    path: "logkafka.pid"
+    path: "exocet-metaserver.pid"
     override: true
-
-kafka:
-  # 多个broker之间逗号分隔
-  brokers: "127.0.0.1:9092"
-  topic: "telemetry"
 
 redis:
   sentinel:
     - 192.168.1.100:26380
     - 192.168.1.100:26381
     - 192.168.1.100:26382
-  meta_db: 192.168.1.100: 6379
+  meta_db_name: meta
+  update_interval: 90

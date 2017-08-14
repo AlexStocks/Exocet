@@ -1,11 +1,6 @@
 package main
 
 import (
-	"sync/atomic"
-	"time"
-)
-
-import (
 	"github.com/AlexStocks/goext/log"
 )
 
@@ -23,10 +18,6 @@ var (
 	Conf ConfYaml
 	// Log records server request log
 	Log gxlog.Logger
-	// now in unix time
-	Now int64
+	// worker
+	worker *SentinelWorker
 )
-
-func UpdateNow() {
-	atomic.StoreInt64(&Now, int64(time.Now().Unix()))
-}
