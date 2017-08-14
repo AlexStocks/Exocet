@@ -1,11 +1,11 @@
 ## develop history ##
 ---
 
-- 2017/05/05
-   > impovement
-	* use tiker instead of time.After
+- 2017/08/14
+   > feature
+	* store meta data to metaDB
 
-- 2017/06/27
-   > impovement
+- 2017/08/09
+   > feature
 	* init
 

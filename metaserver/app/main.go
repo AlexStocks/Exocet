@@ -128,6 +128,7 @@ func initSignal() {
 				Log.Close()
 				return
 			}
+
 		case <-ticker.C:
 			worker.updateClusterMeta()
 		}

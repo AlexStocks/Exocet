@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 )
 
 import (
 	"github.com/AlexStocks/goext/database/redis"
-	"github.com/AlexStocks/log4go"
+	"github.com/garyburd/redigo/redis"
 	"github.com/pkg/errors"
 )
 
@@ -16,6 +17,9 @@ type (
 	ClusterMeta struct {
 		Version   int32                       `json:"version, omitempty"`
 		Instances map[string]gxredis.Instance `json:"instances, omitempty"`
+	}
+	InstanceNameList struct {
+		list []string `json:"list, omitempty"`
 	}
 	SentinelWorker struct {
 		sntl *gxredis.Sentinel
@@ -28,6 +32,15 @@ type (
 )
 
 func NewSentinelWorker() *SentinelWorker {
+	var (
+		err       error
+		res       interface{}
+		instances []gxredis.Instance
+		metaDB    gxredis.Instance
+		metaConn  redis.Conn
+		version   int
+	)
+
 	worker := &SentinelWorker{
 		sntl: gxredis.NewSentinel(Conf.Redis.Sentinels),
 		meta: ClusterMeta{
@@ -35,22 +48,93 @@ func NewSentinelWorker() *SentinelWorker {
 		},
 	}
 
-	instances, err := worker.sntl.GetInstances()
+	instances, err = worker.sntl.GetInstances()
 	if err != nil {
 		panic(fmt.Sprintf("st.GetInstances, error:%#v\n", err))
 	}
 
 	for _, inst := range instances {
+		if inst.Name == Conf.Redis.MetaDBName {
+			metaDB = inst
+		}
 		// discover new sentinel
 		err = worker.sntl.Discover(inst.Name)
 		if err != nil {
 			panic(fmt.Sprintf("failed to discover sentiinels of instance:%s, error:%#v", inst.Name, err))
 		}
 	}
-	// TODO: get meta version from redis
+
 	worker.meta.Version = 1
+	if metaDB.Name == "" {
+		panic("can not find meta db.")
+	}
+	if metaConn, err = worker.sntl.GetConnByRole(metaDB.Master.String(), gxredis.RR_Master); err != nil {
+		panic(fmt.Sprintf("gxsentinel.GetConnByRole(%s, RR_Master) = %#v", metaDB.Master.String(), err))
+	}
+	defer metaConn.Close()
+	if res, err = metaConn.Do("hget", Conf.Redis.MetaHashtable, Conf.Redis.MetaVersion); err != nil {
+		panic(fmt.Sprintf("hget(%s, %s, %s) = error:%#v", Conf.Redis.MetaHashtable, Conf.Redis.MetaVersion, err))
+	}
+	if version, err = strconv.Atoi(string(res.([]byte))); err != nil {
+		panic(fmt.Sprintf("strconv.Atoi(%#v) = error:%#v", res, err))
+	}
+	worker.meta.Version = int32(version)
+
+	worker.updateClusterMeta()
 
 	return worker
+}
+
+func (w *SentinelWorker) storeClusterMetaData() error {
+	var (
+		err              error
+		ok               bool
+		jsonStr          []byte
+		metaDB           gxredis.Instance
+		metaConn         redis.Conn
+		instanceNameList InstanceNameList
+	)
+
+	w.RLock()
+	defer w.RUnlock()
+
+	if len(w.meta.Instances) == 0 {
+		return fmt.Errorf("redis cluster instance pool is empty.")
+	}
+
+	if metaDB, ok = w.meta.Instances[Conf.Redis.MetaDBName]; !ok {
+		return fmt.Errorf("can not find meta db.")
+	}
+
+	if metaConn, err = w.sntl.GetConnByRole(metaDB.Master.String(), gxredis.RR_Master); err != nil {
+		return errors.Wrapf(err, "gxsentinel.GetConnByRole(%s, RR_Master)", metaDB.Master.String())
+	}
+	defer metaConn.Close()
+
+	if _, err = metaConn.Do("hset", Conf.Redis.MetaHashtable, Conf.Redis.MetaVersion, w.meta.Version); err != nil {
+		return errors.Wrapf(err, "hset(%s, %s, %s)", Conf.Redis.MetaHashtable, Conf.Redis.MetaVersion, w.meta.Version)
+	}
+	for k, v := range w.meta.Instances {
+		if k != Conf.Redis.MetaDBName {
+			if jsonStr, err = json.Marshal(v); err != nil {
+				Log.Error("json.Marshal(%#v) = %#v", v, err)
+				continue
+			}
+			if _, err = metaConn.Do("hset", Conf.Redis.MetaHashtable, k, string(jsonStr)); err != nil {
+				Log.Error(err, "hset(%s, %s, %s) = error:%#v", Conf.Redis.MetaHashtable, k, string(jsonStr), err)
+				continue
+			}
+			instanceNameList.list = append(instanceNameList.list, k)
+		}
+	}
+	if jsonStr, err = json.Marshal(instanceNameList); err != nil {
+		return errors.Wrapf(err, "json.Marshal(%#v)", instanceNameList)
+	}
+	if _, err = metaConn.Do("hset", Conf.Redis.MetaHashtable, Conf.Redis.MetaInstNameList, string(jsonStr)); err != nil {
+		return errors.Wrapf(err, "hset(%s, %s, %s)", Conf.Redis.MetaHashtable, Conf.Redis.MetaInstNameList, string(jsonStr))
+	}
+
+	return nil
 }
 
 func (w *SentinelWorker) updateClusterMeta() error {
@@ -95,6 +179,9 @@ func (w *SentinelWorker) updateClusterMeta() error {
 		w.meta.Version++
 		w.Unlock()
 		// update meta data to meta redis
+		if err = w.storeClusterMetaData(); err != nil {
+			return errors.Wrapf(err, "SentinelWorker.storeClusterMetaData()")
+		}
 	}
 
 	return nil
@@ -136,6 +223,7 @@ func (w *SentinelWorker) WatchInstanceSwitch() error {
 		for addr := range c {
 			Log.Info("redis instance switch info: %#v\n", addr)
 			w.updateClusterMetaByInstanceSwitch(addr)
+			w.storeClusterMetaData()
 		}
 		Log.Info("instance switch watch exit")
 	}()

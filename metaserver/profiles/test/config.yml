@@ -14,3 +14,6 @@ redis:
     - 192.168.1.100:26382
   meta_db_name: meta
   update_interval: 90
+  meta_hashtable: meta_hashtable
+  meta_version: version
+  meta_instance_name_list: instance_name_list

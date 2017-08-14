@@ -30,9 +30,12 @@ type SectionCore struct {
 
 // SectionKafka is sub section of config.
 type SectionRedis struct {
-	Sentinels      []string `yaml:"sentinel"`
-	MetaDBName     string   `yaml:"meta_db_name"`
-	UpdateInterval int      `yaml:"update_interval"`
+	Sentinels        []string `yaml:"sentinel"`
+	MetaDBName       string   `yaml:"meta_db_name"`
+	UpdateInterval   int      `yaml:"update_interval"`
+	MetaHashtable    string   `yaml:"meta_hashtable"`
+	MetaVersion      string   `yaml:"meta_version"`
+	MetaInstNameList string   `yaml:"meta_instance_name_list"`
 }
 
 // LoadConfYaml provide load yml config.
