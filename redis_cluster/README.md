@@ -18,3 +18,7 @@ redis cluster  with sentinel
 * if you wanna shutdown the cluster, do it as follows
 
 		sh cluster.sh stop 2
+		
+# Attention
+* In production environment, place the 3 sentinels on 3 different hosts.
+* In production environment, place redis instance on host where you should not place sentinel. Otherwise metaserver will get the redis host address "127.0.0.1" which the metaserver or the proxy can not connect to it. 

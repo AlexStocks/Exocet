@@ -43,13 +43,11 @@ func LoadConfYaml(confPath string) (ConfYaml, error) {
 	var config ConfYaml
 
 	configFile, err := ioutil.ReadFile(confPath)
-
 	if err != nil {
 		return config, err
 	}
 
 	err = yaml.Unmarshal(configFile, &config)
-
 	if err != nil {
 		return config, err
 	}
