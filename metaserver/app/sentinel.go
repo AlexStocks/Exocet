@@ -266,15 +266,25 @@ func (w *SentinelWorker) updateClusterMetaByInstanceSwitch(info gxredis.MasterSw
 	inst := w.meta.Instances[info.Name]
 	inst.Name = info.Name
 	inst.Master = info.NewMaster
+	inst.Slaves = []gxredis.Slave{}
 	slaves, err := w.sntl.Slaves(inst.Name)
 	if err != nil {
 		Log.Error("failed to get slaves of %s", inst)
 	} else {
-		inst.Slaves = slaves
+		var slaveArray []gxredis.Slave
+		for _, slave := range slaves {
+			if slave.Available() {
+				slaveArray = append(slaveArray, slave)
+			}
+		}
+		if 0 < len(slaveArray) {
+			inst.Slaves = slaveArray
+		}
 	}
 
 	w.meta.Instances[inst.Name] = inst
 	w.meta.Version++
+	Log.Debug("get switch info:%#v, new inst:%#v, version:%d", info, inst, w.meta.Version)
 }
 
 func (w *SentinelWorker) WatchInstanceSwitch() error {

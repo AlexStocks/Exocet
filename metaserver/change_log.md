@@ -5,8 +5,6 @@
    > feature
    * use transaction when store meta data
    * load meta data from metaDB when app startup
-   > misc
-   * got two notifications when switch master
 
 - 2017/08/14
    > feature
