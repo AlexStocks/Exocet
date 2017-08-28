@@ -28,9 +28,9 @@ type SectionCore struct {
 	PID             SectionPID `yaml:"pid"`
 }
 
-// SectionKafka is sub section of config.
+// SectionRedis is sub section of config.
 type SectionRedis struct {
-	Sentinels        []string `yaml:"sentinel"`
+	Sentinels        []string `yaml:"sentinels"`
 	MetaDBName       string   `yaml:"meta_db_name"`
 	UpdateInterval   int      `yaml:"update_interval"`
 	MetaHashtable    string   `yaml:"meta_hashtable"`

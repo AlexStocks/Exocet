@@ -8,7 +8,7 @@ core:
     override: true
 
 redis:
-  sentinel:
+  sentinels:
     - 192.168.1.100:26380
     - 192.168.1.100:26381
     - 192.168.1.100:26382
