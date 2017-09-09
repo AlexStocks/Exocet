@@ -25,6 +25,7 @@ type SectionPID struct {
 type SectionCore struct {
 	Mode            string     `yaml:"mode"`
 	FailFastTimeout int        `yaml:"fail_fast_timeout"`
+	BindAddr        string     `yaml:"bind_addr"`
 	PID             SectionPID `yaml:"pid"`
 }
 
