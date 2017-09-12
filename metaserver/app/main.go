@@ -207,5 +207,7 @@ func main() {
 		panic(fmt.Sprintf("failed to start watch instance switch goroutine, error:%#v", err))
 	}
 
+	go startHTTP(Conf.Core.BindAddr)
+
 	initSignal()
 }

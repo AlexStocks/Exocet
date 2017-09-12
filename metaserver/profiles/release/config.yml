@@ -1,5 +1,6 @@
 core:
   mode: "release"
+  bind_addr: :10080
   fail_fast_timeout: 3 # 当程序收到signal时候，要保证在fail_fast_timeout(unit: second)时间段内退出
   log_size: 4096
   pid:
@@ -8,7 +9,7 @@ core:
     override: true
 
 redis:
-  sentinel:
+  sentinels:
     - 192.168.1.100:26380
     - 192.168.1.100:26381
     - 192.168.1.100:26382

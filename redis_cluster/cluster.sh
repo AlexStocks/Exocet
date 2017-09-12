@@ -16,6 +16,8 @@ instance_name=cache
 master_port=4000
 slave_port=14000
 
+sentinel_port=26380
+
 meta_name=meta
 meta_master_port=6000
 meta_slave_port=6001
@@ -74,7 +76,6 @@ start() {
 	# start sentinels
 	instance_set=${instance_set:1}
 	cp script/cluster_notify.sh /tmp/
-	sentinel_port=26380
 	for ((idx = 0; idx < 3; idx ++))
 	do
 		[[ -d sentinel$idx ]] && cd sentinel$idx && sh sentinel-load.sh start $local_ip $sentinel_port /tmp/cluster_notify.sh $instance_set && cd ..
