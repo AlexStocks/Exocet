@@ -1,6 +1,10 @@
 ## develop history ##
 ---
 
+-2017/09/12
+   > feature
+   * use gogoprotobuf 
+
 -2017/08/27
    > feature
    * use transaction when store meta data

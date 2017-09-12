@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"runtime"
-	"strconv"
 )
 
 type Response struct {
@@ -32,46 +30,21 @@ func dumpStackHandler(w http.ResponseWriter, r *http.Request) {
 // getMetaHandler return the metadata of redis cluster
 func getMetaHandler(w http.ResponseWriter, r *http.Request) {
 	Log.Debug("get request from %#v", r.RemoteAddr)
+	//if id, ok := r.Header[textproto.CanonicalMIMEHeaderKey("id")]; ok {
+	//}
 
-	// If open up the authentication
-	if sched.Config.API.EnabledAuth {
-		Log.Info("from ip %v", ip)
-		if !Authenticate(ip, sched.APIWhiteList) {
-			json.NewEncoder(w).Encode(&Response{Status: -2, Message: "Access denied"})
-			return
-		}
-	}
-
-	if r.Body == nil {
-		json.NewEncoder(w).Encode(&Response{Status: -1, Message: "Empty payload"})
-		return
-	}
-
-	var plan Plan
-	err = json.NewDecoder(r.Body).Decode(&plan)
+	meta, err := json.Marshal(worker.meta)
 	if err != nil {
-		json.NewEncoder(w).Encode(&Response{Status: -1, Message: fmt.Sprintf("%v", err)})
+		json.NewEncoder(w).Encode(&Response{Status: -2, Message: err.Error()})
 		return
 	}
 
-	if requestID, ok := r.Header[textproto.CanonicalMIMEHeaderKey("push-id")]; ok && 0 < len(requestID) {
-		plan.RequestID = requestID[0]
-	}
-
-	if pushExpiration, ok := r.Header[textproto.CanonicalMIMEHeaderKey("push-expiration")]; ok {
-		if expiration, err := strconv.Atoi(pushExpiration[0]); err == nil {
-			plan.RequestExpiration = int64(expiration)
-		}
-	}
-
-	Log.Info("receive http request, ip:%v, plan:%#v", ip, plan)
-	go sched.Handle(&plan)
-	json.NewEncoder(w).Encode(&Response{Status: 0, Message: "Plan is scheduled"})
+	json.NewEncoder(w).Encode(&Response{Status: 0, Message: string(meta)})
 }
 
 // startHTTP start a HTTP server to serve.
 func startHTTP(addr string) {
 	http.HandleFunc("/stack", dumpStackHandler)
-	http.HandleFunc("/cluster/getmeta", getMetaHandler)
+	http.HandleFunc("/cluster/meta", getMetaHandler)
 	Log.Critical(http.ListenAndServe(addr, LogMiddleware(http.DefaultServeMux)))
 }

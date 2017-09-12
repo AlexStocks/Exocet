@@ -14,13 +14,6 @@ import (
 )
 
 type (
-	ClusterMeta struct {
-		Version   int32                       `json:"version, omitempty"`
-		Instances map[string]gxredis.Instance `json:"instances, omitempty"`
-	}
-	InstanceNameList struct {
-		List []string `json:"list, omitempty"`
-	}
 	SentinelWorker struct {
 		sntl *gxredis.Sentinel
 		// redis instances meta data
@@ -42,7 +35,7 @@ func NewSentinelWorker() *SentinelWorker {
 	sw = &SentinelWorker{
 		sntl: gxredis.NewSentinel(Conf.Redis.Sentinels),
 		meta: ClusterMeta{
-			Instances: make(map[string]gxredis.Instance, 32),
+			Instances: make(map[string]*gxredis.Instance, 32),
 		},
 	}
 
@@ -66,7 +59,6 @@ func NewSentinelWorker() *SentinelWorker {
 	if metaDB.Name == "" {
 		panic("can not find meta db.")
 	}
-
 	if err = sw.loadClusterMetaData(); err != nil {
 		panic(fmt.Sprintf("loadClusterMetaData() = error:%#v", err))
 	}
@@ -99,8 +91,9 @@ func (w *SentinelWorker) loadClusterMetaData() error {
 			break
 		}
 	}
-	if metaConn, err = w.sntl.GetConnByRole(metaDB.Master.String(), gxredis.RR_Master); err != nil {
-		return errors.Wrapf(err, "gxsentinel.GetConnByRole(%s, RR_Master)", metaDB.Master.String())
+
+	if metaConn, err = w.sntl.GetConnByRole(metaDB.Master.TcpAddr().String(), gxredis.RR_Master); err != nil {
+		return errors.Wrapf(err, "gxsentinel.GetConnByRole(%s, RR_Master)", metaDB.Master.TcpAddr().String())
 	}
 	defer metaConn.Close()
 
@@ -128,7 +121,7 @@ func (w *SentinelWorker) loadClusterMetaData() error {
 					return errors.Wrapf(err, "json.Unmarshal(value:%s)", string(value))
 				}
 				Log.Debug("name:%s, inst:%s", key, inst)
-				w.meta.Instances[key] = inst
+				w.meta.Instances[key] = &inst
 			}
 			key = ""
 		}
@@ -143,7 +136,7 @@ func (w *SentinelWorker) storeClusterMetaData() error {
 		ok               bool
 		queued           interface{}
 		jsonStr          []byte
-		metaDB           gxredis.Instance
+		metaDB           *gxredis.Instance
 		metaConn         redis.Conn
 		instanceNameList InstanceNameList
 	)
@@ -159,8 +152,8 @@ func (w *SentinelWorker) storeClusterMetaData() error {
 		return fmt.Errorf("can not find meta db")
 	}
 
-	if metaConn, err = w.sntl.GetConnByRole(metaDB.Master.String(), gxredis.RR_Master); err != nil {
-		return errors.Wrapf(err, "gxsentinel.GetConnByRole(%s, RR_Master)", metaDB.Master.String())
+	if metaConn, err = w.sntl.GetConnByRole(metaDB.Master.TcpAddr().String(), gxredis.RR_Master); err != nil {
+		return errors.Wrapf(err, "gxsentinel.GetConnByRole(%s, RR_Master)", metaDB.Master.TcpAddr().String())
 	}
 	defer func() {
 		if err != nil {
@@ -242,7 +235,7 @@ func (w *SentinelWorker) updateClusterMeta() error {
 		if !ok {
 			w.Lock()
 			flag = true
-			w.meta.Instances[inst.Name] = inst
+			w.meta.Instances[inst.Name] = &inst
 			w.Unlock()
 		}
 	}
@@ -265,13 +258,13 @@ func (w *SentinelWorker) updateClusterMetaByInstanceSwitch(info gxredis.MasterSw
 	defer w.Unlock()
 	inst := w.meta.Instances[info.Name]
 	inst.Name = info.Name
-	inst.Master = info.NewMaster
-	inst.Slaves = []gxredis.Slave{}
+	inst.Master = &(info.NewMaster)
+	inst.Slaves = []*gxredis.Slave{}
 	slaves, err := w.sntl.Slaves(inst.Name)
 	if err != nil {
 		Log.Error("failed to get slaves of %s", inst)
 	} else {
-		var slaveArray []gxredis.Slave
+		var slaveArray []*gxredis.Slave
 		for _, slave := range slaves {
 			if slave.Available() {
 				slaveArray = append(slaveArray, slave)

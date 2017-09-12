@@ -1,5 +1,5 @@
 core:
-  mode: "test"
+  mode: "dev"
   bind_addr: :10080
   fail_fast_timeout: 3 # 当程序收到signal时候，要保证在fail_fast_timeout(unit: second)时间段内退出
   log_size: 4096
@@ -10,9 +10,9 @@ core:
 
 redis:
   sentinels:
-    - 192.168.1.100:26380
-    - 192.168.1.100:26381
-    - 192.168.1.100:26382
+    - 192.168.11.100:26380
+    - 192.168.11.100:26381
+    - 192.168.11.100:26382
   meta_db_name: meta
   update_interval: 90
   meta_hashtable: meta_hashtable
