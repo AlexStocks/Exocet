@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package main;
+
+message Response {
+	ErrorCode Code = 1;
+	string Message = 2;
+}
+
+enum ErrorCode {
+	EC_OK = 0;
+	EC_ILLEGAL_PARAM = 1;
+	EC_ILLEGAL_HTTP_METHOD = 2;
+	EC_SYS_ERROR = 3;
+}
+

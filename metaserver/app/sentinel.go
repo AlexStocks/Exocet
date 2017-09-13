@@ -204,6 +204,7 @@ func (w *SentinelWorker) updateClusterMeta() error {
 	if err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("st.GetInstances, error:%#v\n", err))
 	}
+	Log.Debug("current meta:%s", w.meta.Instances)
 
 	var flag bool
 	for _, inst := range instances {
@@ -221,15 +222,16 @@ func (w *SentinelWorker) updateClusterMeta() error {
 			}
 		}
 
+		var redisInst gxredis.Instance
 		w.RLock()
-		redisInst, ok := w.meta.Instances[inst.Name]
+		ptr, ok := w.meta.Instances[inst.Name]
+		if ptr != nil {
+			redisInst = *ptr
+		}
 		w.RUnlock()
-		Log.Debug("instance %s, ok:%v", inst, ok)
+		Log.Debug("instance %s, redisInst:%s, ok:%v", inst, redisInst, ok)
 		if ok { // 在原来name已经存在的情况下，再查验instance值是否相等
-			Log.Debug("instance %s has already existed", inst.Name)
-			instJSON, _ := json.Marshal(inst)
-			redisInstJSON, _ := json.Marshal(redisInst)
-			ok = string(instJSON) == string(redisInstJSON)
+			ok = inst.Equal(redisInst)
 			Log.Debug("instance{name:%s, old:%s, current:%s}, ok:%v", inst.Name, redisInst, inst, ok)
 		}
 		if !ok {
@@ -301,6 +303,14 @@ func (w *SentinelWorker) WatchInstanceSwitch() error {
 	}()
 
 	return nil
+}
+
+func (w *SentinelWorker) addInstance(inst gxredis.RawInstance) error {
+	return w.sntl.AddInstance(inst)
+}
+
+func (w *SentinelWorker) removeInstance(name string) error {
+	return w.sntl.RemoveInstance(name)
 }
 
 func (w *SentinelWorker) Close() {
