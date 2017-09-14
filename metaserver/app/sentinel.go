@@ -62,8 +62,9 @@ func NewSentinelWorker() *SentinelWorker {
 	if err = sw.loadClusterMetaData(); err != nil {
 		panic(fmt.Sprintf("loadClusterMetaData() = error:%#v", err))
 	}
-	Log.Debug("after loadClusterMetaData(), worker.meta:%#v", sw.meta)
+	Log.Debug("after loadClusterMetaData(), worker.meta:%s", sw.meta.Instances)
 	sw.updateClusterMeta()
+	Log.Debug("after updateClusterMetaData(), worker.meta:%s", sw.meta.Instances)
 
 	return sw
 }
@@ -207,7 +208,8 @@ func (w *SentinelWorker) updateClusterMeta() error {
 	Log.Debug("current meta:%s", w.meta.Instances)
 
 	var flag bool
-	for _, inst := range instances {
+	for _, i := range instances {
+		inst := i
 		// discover new sentinel
 		err = w.sntl.Discover(inst.Name, []string{"127.0.0.1"})
 		if err != nil {
@@ -222,12 +224,8 @@ func (w *SentinelWorker) updateClusterMeta() error {
 			}
 		}
 
-		var redisInst gxredis.Instance
 		w.RLock()
-		ptr, ok := w.meta.Instances[inst.Name]
-		if ptr != nil {
-			redisInst = *ptr
-		}
+		redisInst, ok := w.meta.Instances[inst.Name]
 		w.RUnlock()
 		Log.Debug("instance %s, redisInst:%s, ok:%v", inst, redisInst, ok)
 		if ok { // 在原来name已经存在的情况下，再查验instance值是否相等
