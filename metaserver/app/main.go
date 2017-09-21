@@ -206,6 +206,9 @@ func main() {
 	if err = worker.WatchInstanceSwitch(); err != nil {
 		panic(fmt.Sprintf("failed to start watch instance switch goroutine, error:%#v", err))
 	}
+	if err = worker.WatchSdown(); err != nil {
+		panic(fmt.Sprintf("failed to start watch +sdown goroutine, error:%#v", err))
+	}
 
 	go startHTTP(Conf.Core.BindAddr)
 
