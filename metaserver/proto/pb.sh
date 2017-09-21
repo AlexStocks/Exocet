@@ -16,4 +16,5 @@ gopath=~/test/golang/lib/src/github.com/gogo/protobuf/protobuf
 # gogo.proto is located in github.com/gogo/protobuf/gogoproto
 gogopath=~/test/golang/lib/src/
 
-protoc -I=$gopath:$gogopath:/Users/alex/test/golang/lib/src/github.com/AlexStocks/goext/database/redis/:./ --gogoslick_out=Mredis_meta.proto="github.com/AlexStocks/goext/database/redis":../app/  cluster_meta.proto
+# protoc -I=$gopath:$gogopath:/Users/alex/test/golang/lib/src/github.com/AlexStocks/goext/database/redis/:./ --gogoslick_out=Mredis_meta.proto="github.com/AlexStocks/goext/database/redis":../app/  cluster_meta.proto
+protoc -I=$gopath:$gogopath:/Users/alex/test/golang/lib/src/github.com/AlexStocks/goext/database/redis/:./ --gogoslick_out=Mredis_meta.proto="github.com/AlexStocks/goext/database/redis":../app/  response.proto
