@@ -104,7 +104,7 @@ func initSignal() {
 	var (
 		// signal.Notify的ch信道是阻塞的(signal.Notify不会阻塞发送信号), 需要设置缓冲
 		signals = make(chan os.Signal, 1)
-		ticker  = time.NewTicker(gxtime.TimeSecondDuration(Conf.Redis.UpdateInterval))
+		ticker  = time.NewTicker(gxtime.TimeSecondDuration(float64(Conf.Redis.UpdateInterval)))
 	)
 	// It is not possible to block SIGKILL or syscall.SIGSTOP
 	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
